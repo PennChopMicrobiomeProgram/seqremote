@@ -17,7 +17,7 @@ def capture_json_output(fcn, *args):
         sys.stdout = old_stdout
         f.seek(0)
         json_data = f.read()
-        return json.loads(json_data)
+    return json.loads(json_data)
 
 
 def gzip_if_needed(fp):
@@ -36,20 +36,21 @@ class OneCodexApp(object):
                 "Could not load API key from environment variable "
                 "ONE_CODEX_API_KEY.\n")
 
-    def assign_sample(self, sample_fp, output_dir, wait=120, timeout=86400):
+    def assign_sample(self, sample_fp, output_dir, summary_fp, wait=120, timeout=86400):
         """Assign a single sample file, start to finish."""
-        sample_id = self.upload_sample(sample_fp)
+        sample_id, sample_fn = self.upload_sample(sample_fp)
         starting_time = time.clock()
         time.sleep(wait)        
         while True:
-            analyses = self.get_analyses(sample_id)
+            analyses = self.get_analyses(sample_fn)
             if self.analyses_are_finished(analyses):
                 break
             total_time = time.clock() - starting_time
             if (total_time > timeout):
                 raise RuntimeError("Timed out. {}".format(analyses))
             time.sleep(wait)
-        summaries = self.retrieve_analyses(analyses, output_dir)
+        summaries = self.retrieve_analyses(
+            sample_fn, output_dir, summary_fp, analyses)
         return summaries
 
     def upload_sample(self, sample_fp, wait=10):
@@ -63,16 +64,16 @@ class OneCodexApp(object):
         sample_id = self._get_sample_id(sample_fn, samples_json)
         if needed_gzip:
             os.remove(gzipped_sample_fp)
-        return sample_id
+        return sample_id, sample_fn
 
-    def get_analyses(self, sample_id):
+    def get_analyses(self, sample_fn):
         """Get analyses associated with a sample."""
-        return list(self._get_analyses(sample_id))
+        return list(self._get_analyses(sample_fn))
 
-    def _get_analyses(self, sample_id):
+    def _get_analyses(self, sample_fn):
         analyses = self._cli(["analyses"], json=True)
         for a in analyses:
-            if a["sample_id"] == sample_id:
+            if a["sample_filename"] == sample_fn:
                 yield a
 
     @staticmethod
@@ -82,8 +83,10 @@ class OneCodexApp(object):
         finished = map(is_finished, analyses)
         return all(finished)
 
-    def retrieve_analyses(self, analyses, output_dir):
+    def retrieve_analyses(self, sample_fn, output_dir, summary_fp, analyses=None):
         """Download all analysis results, return summary."""
+        if analyses is None:
+            analyses = self.get_analyses(sample_fn)
         if not self.analyses_are_finished(analyses):
             raise ValueError("Not finished: {}".format(analyses))
         analysis_summaries = []
@@ -92,6 +95,7 @@ class OneCodexApp(object):
             summary[u'table_fp'] = self.download_table(a, output_dir)
             summary[u'raw_fp'] = self.download_raw_output(a, output_dir)
             analysis_summaries.append(summary)
+        json.dump(analysis_summaries, summary_fp)
         return analysis_summaries
 
     def get_analysis_summary(self, analysis_id):
