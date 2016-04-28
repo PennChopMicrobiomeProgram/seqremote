@@ -1,20 +1,9 @@
 import json
 import os
-import subprocess
-import sys
-import tempfile
 import time
 
 import onecodex.cli
 import requests
-
-
-def gzip_if_needed(fp):
-    needs_gzip = not fp.endswith(".gz")
-    if needs_gzip:
-        subprocess.check_call(["gzip", "--keep", fp])
-        fp = fp + ".gz"
-    return needs_gzip, fp
 
 
 class OneCodexApp(object):
@@ -27,7 +16,8 @@ class OneCodexApp(object):
 
     def assign_sample(self, sample_fp, output_dir, summary_fp, wait=120, timeout=86400):
         """Assign a single sample file, start to finish."""
-        sample_id, sample_fn = self.upload_sample(sample_fp)
+        sample_id = self.upload_sample(sample_fp)
+        sample_fn = os.path.basename(sample_fp)
         starting_time = time.clock()
         time.sleep(wait)        
         while True:
@@ -44,16 +34,12 @@ class OneCodexApp(object):
 
     def upload_sample(self, sample_fp, wait=10):
         """Upload a sample file and return uuid."""
-        needed_gzip, gzipped_sample_fp = gzip_if_needed(sample_fp)
-        print "GZIPPED_SAMPLE_FP:", gzipped_sample_fp
-        self._cli(["upload", gzipped_sample_fp])
+        self._cli(["upload", sample_fp])
         time.sleep(wait)
         samples_json = self._api("samples")
-        sample_fn = os.path.basename(gzipped_sample_fp)
+        sample_fn = os.path.basename(sample_fp)
         sample_id = self._get_sample_id(sample_fn, samples_json)
-        if needed_gzip:
-            os.remove(gzipped_sample_fp)
-        return sample_id, sample_fn
+        return sample_id
 
     def get_sample_ids(self, sample_fps):
         samples_json = self._api("samples")

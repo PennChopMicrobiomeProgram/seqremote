@@ -21,18 +21,6 @@ def copy_to_temp(fp):
     return temp_file
 
 
-class UtilityFunctionTests(unittest.TestCase):
-    def test_gzip_if_needed(self):
-        temp_dir = tempfile.mkdtemp()
-        fp = os.path.join(temp_dir, "test.fasta")
-        with open(fp, "w") as f:
-            f.write("abcdefg\n1234567890\n")
-        self.assertEqual(gzip_if_needed(fp), (True, fp + ".gz"))
-        # Original file should still be there
-        self.assertTrue(os.path.exists(fp))
-        shutil.rmtree(temp_dir)
-
-
 class OneCodexAppTests(unittest.TestCase):
     def test_analysis_output_base(self):
         self.assertEqual(
@@ -51,12 +39,16 @@ class OneCodexAppTests(unittest.TestCase):
     def test_assign_file(self):
         sample_data_fp = os.path.join(THIS_DIR, "chop_5015_02.fastq")
         sample_file = copy_to_temp(sample_data_fp)
-        print sample_file.name
+        print "Sample file:", sample_file.name
         output_dir = tempfile.mkdtemp()
+        summary_fp = os.path.join(output_dir, "summary.json")
+        print "Output directory:", output_dir
         app = OneCodexApp()
-        summary = app.assign_sample(sample_file.name, output_dir, 10, 100)
-        print os.listdir(output_dir)
-        self.assertEqual(len(summary), 2)
+        app.assign_sample(
+            sample_file.name, output_dir, summary_fp, 10, 100)
+        obs_files = os.listdir(output_dir)
+        print "Output directory contents:", os.listdir(output_dir)
+        self.assertEqual(len(obs_files), 3)
 
 
 ANALYSES = json.loads("""\
