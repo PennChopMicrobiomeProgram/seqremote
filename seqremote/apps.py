@@ -9,17 +9,6 @@ import onecodex.cli
 import requests
 
 
-def capture_json_output(fcn, *args):
-    old_stdout = sys.stdout
-    with tempfile.NamedTemporaryFile() as f:
-        sys.stdout = f
-        fcn(*args)
-        sys.stdout = old_stdout
-        f.seek(0)
-        json_data = f.read()
-    return json.loads(json_data)
-
-
 def gzip_if_needed(fp):
     needs_gzip = not fp.endswith(".gz")
     if needs_gzip:
@@ -59,7 +48,7 @@ class OneCodexApp(object):
         print "GZIPPED_SAMPLE_FP:", gzipped_sample_fp
         self._cli(["upload", gzipped_sample_fp])
         time.sleep(wait)
-        samples_json = self._cli(["samples"], json=True)
+        samples_json = self._api("samples")
         sample_fn = os.path.basename(gzipped_sample_fp)
         sample_id = self._get_sample_id(sample_fn, samples_json)
         if needed_gzip:
@@ -71,7 +60,7 @@ class OneCodexApp(object):
         return list(self._get_analyses(sample_fn))
 
     def _get_analyses(self, sample_fn):
-        analyses = self._cli(["analyses"], json=True)
+        analyses = self._api("analyses")
         for a in analyses:
             if a["sample_filename"] == sample_fn:
                 yield a
@@ -95,20 +84,20 @@ class OneCodexApp(object):
             summary[u'table_fp'] = self.download_table(a, output_dir)
             summary[u'raw_fp'] = self.download_raw_output(a, output_dir)
             analysis_summaries.append(summary)
-        json.dump(analysis_summaries, summary_fp)
+        with open(summary_fp, "w") as f:
+            json.dump(analysis_summaries, f)
         return analysis_summaries
 
     def get_analysis_summary(self, analysis_id):
         """Get analysis summary."""
-        return self._cli(["analyses", analysis_id], json=True)
+        return self._api("analyses", analysis_id)
 
     def download_table(self, analysis, output_dir):
         """Download table output, return filepath."""
         if analysis["analysis_status"] != "Success":
             return None
         analysis_id = analysis["id"]
-        analysis_json = self._cli(
-            ["analyses", analysis_id, "--table"], json=True)
+        analysis_json = self._api("analyses", analysis_id, "table")
         table_fp = os.path.join(
             output_dir, self._analysis_table_filename(analysis))
         with open(table_fp, "w") as f:
@@ -125,13 +114,14 @@ class OneCodexApp(object):
         self._cli(["analyses", analysis_id, "--raw", raw_fp])
         return raw_fp
 
-    def _cli(self, args, json=False):
+    def _api(self, *parts):
+        url = "https://app.onecodex.com/api/v0/" + "/".join(parts)
+        r = requests.get(url, auth=(self.api_key, ""))
+        return r.json()
+
+    def _cli(self, args):
         args = args + ["--api-key", self.api_key]
-        #print "CLI CALL:", args
-        if json:
-            return capture_json_output(onecodex.cli.main, args)
-        else:
-            onecodex.cli.main(args)
+        onecodex.cli.main(args)
 
     @staticmethod
     def _get_sample_id(filename, data):

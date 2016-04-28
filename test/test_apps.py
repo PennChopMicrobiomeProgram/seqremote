@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from seqremote.apps import (
-    OneCodexApp, capture_json_output, gzip_if_needed,
+    OneCodexApp, gzip_if_needed,
 )
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,15 +22,6 @@ def copy_to_temp(fp):
 
 
 class UtilityFunctionTests(unittest.TestCase):
-    def test_capture_json_output(self):
-        def function_that_prints_json(x, y):
-            print '{{"x": "{}",'.format(x)
-            print '"y": "{}"}}'.format(y)
-        observed = capture_json_output(
-            function_that_prints_json, "hello", "world")
-        expected = {"x": "hello", "y": "world"}
-        self.assertEqual(observed, expected)
-
     def test_gzip_if_needed(self):
         temp_dir = tempfile.mkdtemp()
         fp = os.path.join(temp_dir, "test.fasta")
