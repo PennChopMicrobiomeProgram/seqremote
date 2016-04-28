@@ -55,6 +55,13 @@ class OneCodexApp(object):
             os.remove(gzipped_sample_fp)
         return sample_id, sample_fn
 
+    def get_sample_ids(self, sample_fps):
+        samples_json = self._api("samples")
+        all_sample_ids = dict(
+            (r["filename"], r["id"]) for r in samples_json)
+        sample_fns = map(os.path.basename, sample_fps)
+        return [all_sample_ids.get(fn) for fn in sample_fns]
+
     def get_analyses(self, sample_fn):
         """Get analyses associated with a sample."""
         return list(self._get_analyses(sample_fn))
