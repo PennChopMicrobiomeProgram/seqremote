@@ -4,6 +4,24 @@ import json
 
 from seqremote.apps import OneCodexApp
 
+def convert_json_to_table(json_records):
+    fields = ["readcount", "name", "rank", "tax_id"]
+    yield fields
+    for rec in json_records:
+        yield [str(rec[f]) for f in fields]
+
+
+def convert_json(argv=None):
+    p = argparse.ArgumentParser()
+    p.add_argument("input_file", type=argparse.FileType("r"))
+    p.add_argument("output_file", type=argparse.FileType("w"))
+    args = p.parse_args(argv)
+    json_input = json.load(args.input_file)
+    tabular_output = convert_json_to_table(json_input)
+    for line in tabular_output:
+        args.output_file.write("\t".join(line))
+        args.output_file.write("\n")
+
 
 def check_upload(argv=None):
     p = argparse.ArgumentParser()
