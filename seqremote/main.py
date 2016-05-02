@@ -35,13 +35,10 @@ def retrieve_analyses(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("input_file")
     p.add_argument("output_dir")
-    p.add_argument("summary_fp")
     args = p.parse_args(argv)
 
     app = OneCodexApp()
-    summary_data = app.retrieve_analyses(
-        args.input_file, args.output_dir, args.summary_fp,
-    )
+    summary_data = app.retrieve_analyses(args.input_file, args.output_dir)
 
 
 def assign_file(argv=None):

@@ -65,25 +65,26 @@ class OneCodexApp(object):
         finished = map(is_finished, analyses)
         return all(finished)
 
-    def retrieve_analyses(self, sample_fn, output_dir, summary_fp, analyses=None):
+    def retrieve_analyses(self, sample_fn, output_dir, analyses=None):
         """Download all analysis results, return summary."""
         if analyses is None:
             analyses = self.get_analyses(sample_fn)
         if not self.analyses_are_finished(analyses):
             raise ValueError("Not finished: {}".format(analyses))
-        analysis_summaries = []
         for a in analyses:
-            summary = self.get_analysis_summary(a["id"])
-            summary[u'table_fp'] = self.download_table(a, output_dir)
-            summary[u'raw_fp'] = self.download_raw_output(a, output_dir)
-            analysis_summaries.append(summary)
-        with open(summary_fp, "w") as f:
-            json.dump(analysis_summaries, f)
-        return analysis_summaries
+            self.download_analysis_summary(a, output_dir)
+            self.download_table(a, output_dir)
+            self.download_raw_output(a, output_dir)
 
-    def get_analysis_summary(self, analysis_id):
+    def download_analysis_summary(self, analysis, output_dir):
         """Get analysis summary."""
-        return self._api("analyses", analysis_id)
+        analysis_id = analysis["id"]
+        summary = self._api("analyses", analysis_id)
+        summary_fp = os.path.join(
+            output_dir, self._analysis_summary_filename(analysis))
+        with open(summary_fp, "w") as f:
+            json.dump(summary, f)
+        return summary_fp
 
     def download_table(self, analysis, output_dir):
         """Download table output, return filepath."""
@@ -131,6 +132,10 @@ class OneCodexApp(object):
             sample_base, _ = os.path.splitext(sample_base)
         reference_id = analysis["reference_id"]
         return "_".join([sample_base, "ref", reference_id])
+
+    @classmethod
+    def _analysis_summary_filename(cls, analysis):
+        return cls._analysis_output_base(analysis) + "_summary.json"
 
     @classmethod
     def _analysis_table_filename(cls, analysis):
