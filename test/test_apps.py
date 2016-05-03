@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from seqremote.apps import (
-    OneCodexApp, gzip_if_needed,
+    OneCodexApp,
 )
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))

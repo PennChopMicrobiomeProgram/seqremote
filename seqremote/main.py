@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import argparse
 import json
-
+import os
 from seqremote.apps import OneCodexApp
+
 
 def convert_json_to_table(json_records):
     fields = ["readcount", "name", "rank", "tax_id"]
@@ -51,12 +52,22 @@ def upload_file(argv=None):
 
 def retrieve_analyses(argv=None):
     p = argparse.ArgumentParser()
-    p.add_argument("input_file")
-    p.add_argument("output_dir")
+    p.add_argument("input_filename", nargs="+")
+    p.add_argument("--output_dir")
+    p.add_argument("--skip_raw", action="store_true")
     args = p.parse_args(argv)
 
+    fns = set(os.path.basename(fn) for fn in args.input_filename)
     app = OneCodexApp()
-    summary_data = app.retrieve_analyses(args.input_file, args.output_dir)
+    all_analyses = app._api("analyses")
+    analyses = [a for a in all_analyses if a["sample_filename"] in fns]
+    if not app.analyses_are_finished(analyses):
+        raise RuntimeError("Not finished: {}".format(analyses))
+    for a in analyses:
+        app.download_analysis_summary(a, args.output_dir)
+        app.download_table(a, args.output_dir)
+        if not args.skip_raw:
+            app.download_raw_output(a, args.output_dir)
 
 
 def assign_file(argv=None):

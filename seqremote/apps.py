@@ -80,11 +80,12 @@ class OneCodexApp(object):
         """Get analysis summary."""
         analysis_id = analysis["id"]
         summary = self._api("analyses", analysis_id)
-        summary_fp = os.path.join(
-            output_dir, self._analysis_summary_filename(analysis))
-        with open(summary_fp, "w") as f:
+        fp = self._analysis_summary_filename(analysis)
+        if output_dir is not None:
+            fp = os.path.join(output_dir, fp)
+        with open(fp, "w") as f:
             json.dump(summary, f)
-        return summary_fp
+        return fp
 
     def download_table(self, analysis, output_dir):
         """Download table output, return filepath."""
@@ -92,21 +93,23 @@ class OneCodexApp(object):
             return None
         analysis_id = analysis["id"]
         analysis_json = self._api("analyses", analysis_id, "table")
-        table_fp = os.path.join(
-            output_dir, self._analysis_table_filename(analysis))
-        with open(table_fp, "w") as f:
+        fp = self._analysis_table_filename(analysis)
+        if output_dir is not None:
+            fp = os.path.join(output_dir, fp)
+        with open(fp, "w") as f:
             json.dump(analysis_json, f)
-        return table_fp
+        return fp
 
     def download_raw_output(self, analysis, output_dir):
         """Download raw outout, return filepath."""
         if analysis["analysis_status"] != "Success":
             return None
         analysis_id = analysis["id"]
-        raw_fp = os.path.join(
-            output_dir, self._analysis_raw_output_filename(analysis))
-        self._cli(["analyses", analysis_id, "--raw", raw_fp])
-        return raw_fp
+        fp = self._analysis_raw_output_filename(analysis)
+        if output_dir is not None:
+            fp = os.path.join(output_dir, fp)
+        self._cli(["analyses", analysis_id, "--raw", fp])
+        return fp
 
     def _api(self, *parts):
         url = "https://app.onecodex.com/api/v0/" + "/".join(parts)
