@@ -28,7 +28,7 @@ class OneCodexAppTests(unittest.TestCase):
             "decontam_PCMP_sample_5001-03_R1_ref_79e49bd0f3d2424d")
 
     def test_analyses_are_finished(self):
-        self.assertTrue(OneCodexApp.analyses_are_finished(ANALYSES))
+        self.assertTrue(OneCodexApp._analyses_are_finished(ANALYSES))
         
     def test_get_sample_id(self):
         sample_id = OneCodexApp._get_sample_id(

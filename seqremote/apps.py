@@ -21,15 +21,15 @@ class OneCodexApp(object):
         starting_time = time.clock()
         time.sleep(wait)        
         while True:
-            analyses = self.get_analyses(sample_fn)
-            if self.analyses_are_finished(analyses):
+            analyses = self._get_analyses([sample_fn])
+            if self._analyses_are_finished(analyses):
                 break
             total_time = time.clock() - starting_time
             if (total_time > timeout):
                 raise RuntimeError("Timed out. {}".format(analyses))
             time.sleep(wait)
-        summaries = self.retrieve_analyses(
-            sample_fn, output_dir, summary_fp, analyses)
+        summaries = self._download_analysis_files(
+            analyses, output_dir, skip_raw=False)
         return summaries
 
     def upload_sample(self, sample_fp, wait=10):
@@ -48,35 +48,34 @@ class OneCodexApp(object):
         sample_fns = map(os.path.basename, sample_fps)
         return [all_sample_ids.get(fn) for fn in sample_fns]
 
-    def get_analyses(self, sample_fn):
-        """Get analyses associated with a sample."""
-        return list(self._get_analyses(sample_fn))
-
-    def _get_analyses(self, sample_fn):
+    def _get_analyses(self, sample_fns):
+        """Get analyses associated with a set of samples."""
         analyses = self._api("analyses")
-        for a in analyses:
-            if a["sample_filename"] == sample_fn:
-                yield a
+        return [
+            a for a in analyses if a["sample_filename"] in sample_fns]
 
     @staticmethod
-    def analyses_are_finished(analyses):
+    def _analyses_are_finished(analyses):
         def is_finished(analysis):
             return analysis["analysis_status"] != "Pending"
         finished = map(is_finished, analyses)
         return all(finished)
 
-    def retrieve_analyses(self, sample_fn, output_dir, analyses=None):
-        """Download all analysis results, return summary."""
-        if analyses is None:
-            analyses = self.get_analyses(sample_fn)
-        if not self.analyses_are_finished(analyses):
-            raise ValueError("Not finished: {}".format(analyses))
-        for a in analyses:
-            self.download_analysis_summary(a, output_dir)
-            self.download_table(a, output_dir)
-            self.download_raw_output(a, output_dir)
+    def download_analyses(sample_fns, output_dir, skip_raw):
+        analyses = self._get_analyses(sample_fns)
+        self._retrieve_analysis_files(analyses, output_dir, skip_raw)
 
-    def download_analysis_summary(self, analysis, output_dir):
+    def _download_analysis_files(self, analyses, output_dir, skip_raw):
+        """Download all analysis results, return summary."""
+        if not self._analyses_are_finished(analyses):
+            raise RuntimeError("Not finished: {}".format(analyses))
+        for a in analyses:
+            self._download_analysis_summary(a, output_dir)
+            self._download_analysis_table(a, output_dir)
+            if not skip_raw:
+                self._download_analysis_raw_output(a, output_dir)
+
+    def _download_analysis_summary(self, analysis, output_dir):
         """Get analysis summary."""
         analysis_id = analysis["id"]
         summary = self._api("analyses", analysis_id)
@@ -87,7 +86,7 @@ class OneCodexApp(object):
             json.dump(summary, f)
         return fp
 
-    def download_table(self, analysis, output_dir):
+    def _download_analysis_table(self, analysis, output_dir):
         """Download table output, return filepath."""
         if analysis["analysis_status"] != "Success":
             return None
@@ -100,7 +99,7 @@ class OneCodexApp(object):
             json.dump(analysis_json, f)
         return fp
 
-    def download_raw_output(self, analysis, output_dir):
+    def _download_analysis_raw_output(self, analysis, output_dir):
         """Download raw outout, return filepath."""
         if analysis["analysis_status"] != "Success":
             return None

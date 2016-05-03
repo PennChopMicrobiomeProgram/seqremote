@@ -59,15 +59,7 @@ def retrieve_analyses(argv=None):
 
     fns = set(os.path.basename(fn) for fn in args.input_filename)
     app = OneCodexApp()
-    all_analyses = app._api("analyses")
-    analyses = [a for a in all_analyses if a["sample_filename"] in fns]
-    if not app.analyses_are_finished(analyses):
-        raise RuntimeError("Not finished: {}".format(analyses))
-    for a in analyses:
-        app.download_analysis_summary(a, args.output_dir)
-        app.download_table(a, args.output_dir)
-        if not args.skip_raw:
-            app.download_raw_output(a, args.output_dir)
+    app.download_analyses(args.input_filename, args.output_dir, args.skip_raw)
 
 
 def assign_file(argv=None):
