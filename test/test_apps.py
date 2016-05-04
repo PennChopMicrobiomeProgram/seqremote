@@ -22,10 +22,13 @@ def copy_to_temp(fp):
 
 
 class OneCodexAppTests(unittest.TestCase):
-    def test_analysis_output_base(self):
+    def test_analysis_filepath(self):
         self.assertEqual(
-            OneCodexApp._analysis_output_base(ANALYSES[0]),
-            "decontam_PCMP_sample_5001-03_R1_ref_79e49bd0f3d2424d")
+            OneCodexApp._analysis_filepath(ANALYSES[0], ".json", None),
+            "decontam_PCMP_sample_5001-03_R1_ref_79e49bd0f3d2424d.json")
+        self.assertEqual(
+            OneCodexApp._analysis_filepath(ANALYSES[0], "_ABC", "mydir/"),
+            "mydir/decontam_PCMP_sample_5001-03_R1_ref_79e49bd0f3d2424d_ABC")
 
     def test_analyses_are_finished(self):
         self.assertTrue(OneCodexApp._analyses_are_finished(ANALYSES))

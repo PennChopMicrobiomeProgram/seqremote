@@ -79,9 +79,7 @@ class OneCodexApp(object):
         """Get analysis summary."""
         analysis_id = analysis["id"]
         summary = self._api("analyses", analysis_id)
-        fp = self._analysis_summary_filename(analysis)
-        if output_dir is not None:
-            fp = os.path.join(output_dir, fp)
+        fp = self._analysis_filepath(analysis, "_summary.json", output_dir)
         with open(fp, "w") as f:
             json.dump(summary, f)
         return fp
@@ -92,9 +90,7 @@ class OneCodexApp(object):
             return None
         analysis_id = analysis["id"]
         analysis_json = self._api("analyses", analysis_id, "table")
-        fp = self._analysis_table_filename(analysis)
-        if output_dir is not None:
-            fp = os.path.join(output_dir, fp)
+        fp = self._analysis_filepath(analysis, ".json", output_dir)
         with open(fp, "w") as f:
             json.dump(analysis_json, f)
         return fp
@@ -104,9 +100,7 @@ class OneCodexApp(object):
         if analysis["analysis_status"] != "Success":
             return None
         analysis_id = analysis["id"]
-        fp = self._analysis_raw_output_filename(analysis)
-        if output_dir is not None:
-            fp = os.path.join(output_dir, fp)
+        fp = self._analysis_filepath(analysis, ".tsv.gz", output_dir)
         self._cli(["analyses", analysis_id, "--raw", fp])
         return fp
 
@@ -127,22 +121,15 @@ class OneCodexApp(object):
         return None
 
     @staticmethod
-    def _analysis_output_base(analysis):
+    def _analysis_filepath(analysis, suffix, output_dir):
         sample_filename = analysis["sample_filename"]
         sample_base, ext = os.path.splitext(sample_filename)
+        # Take off another extension for gzipped files
         if ext == ".gz":
             sample_base, _ = os.path.splitext(sample_base)
         reference_id = analysis["reference_id"]
-        return "_".join([sample_base, "ref", reference_id])
+        fp = "_".join([sample_base, "ref", reference_id]) + suffix
+        if output_dir is not None:
+            fp = os.path.join(output_dir, fp)
+        return fp
 
-    @classmethod
-    def _analysis_summary_filename(cls, analysis):
-        return cls._analysis_output_base(analysis) + "_summary.json"
-
-    @classmethod
-    def _analysis_table_filename(cls, analysis):
-        return cls._analysis_output_base(analysis) + ".json"
-
-    @classmethod
-    def _analysis_raw_output_filename(cls, analysis):
-        return cls._analysis_output_base(analysis) + ".tsv.gz"
